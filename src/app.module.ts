@@ -5,6 +5,7 @@ import { UsersModule } from './users/users.module';
 import { GemsModule } from './gems/gems.module';
 import { CollectionsModule } from './collections/collections.module';
 import { SuggestionsModule } from './suggestions/suggestions.module';
+import { AiStoneModule } from './ai-stone/ai-stone.module';
 import { DatabaseModule } from './database/database.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { DatabaseModule } from './database/database.module';
     GemsModule,
     CollectionsModule,
     SuggestionsModule,
+    AiStoneModule,
   ],
 })
 export class AppModule {}

@@ -221,6 +221,42 @@ export class GeminiService {
     return true;
   }
 
+  async generateEmbedding(text: string): Promise<number[]> {
+    try {
+      this.logger.log('Generating embedding with Gemini');
+
+      // Get the embedding model
+      const embeddingModel = this.genAI.getGenerativeModel({ model: 'text-embedding-004' });
+      
+      // Generate embedding
+      const result = await embeddingModel.embedContent(text);
+      
+      if (!result || !result.embedding || !result.embedding.values || !Array.isArray(result.embedding.values)) {
+        throw new BadRequestException('Invalid embedding response from Gemini');
+      }
+
+      this.logger.log(`Generated embedding with ${result.embedding.values.length} dimensions`);
+      return result.embedding.values;
+
+    } catch (error) {
+      this.logger.error('Error generating embedding:', error);
+      
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      
+      if (error.message?.includes('API_KEY')) {
+        throw new BadRequestException('Invalid Gemini API key configuration');
+      }
+      
+      if (error.message?.includes('quota')) {
+        throw new BadRequestException('Gemini API quota exceeded. Please try again later.');
+      }
+
+      throw new BadRequestException('Failed to generate embedding with Gemini API');
+    }
+  }
+
   private estimateImageQuality(imageBuffer: Buffer): number {
     // Simple image quality estimation based on file size
     // This is a basic heuristic - could be improved with actual image analysis
