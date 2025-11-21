@@ -37,7 +37,7 @@ export class EmailService {
   async sendPasswordResetEmail(
     toEmail: string,
     resetToken: string,
-  ): Promise<void> {
+  ): Promise<{ success: boolean; messageId?: string }> {
     const mailOptions = {
       from: this.configService.get('FROM_EMAIL', 'no-reply@genstone.app'),
       to: toEmail,
@@ -56,7 +56,9 @@ export class EmailService {
       // Verify SMTP connection first
       await this.transporter.verify();
       // Then send email
-      await this.transporter.sendMail(mailOptions);
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('Email sent: ' + info.response);
+      return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error('Failed to send password reset email:', error);
       throw new Error('Failed to send password reset email. SMTP Error: ' + error.message);

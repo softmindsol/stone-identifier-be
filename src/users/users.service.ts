@@ -58,6 +58,13 @@ export class UsersService {
     }).exec();
   }
 
+    async findByEmailAndResetToken(email: string, token: string): Promise<User | null> {
+    return this.userModel.findOne({ 
+      email: email,
+      resetToken: token
+    }).exec();
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.userModel.findById(id).exec();
     if (!user) {

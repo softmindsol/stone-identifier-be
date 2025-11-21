@@ -197,7 +197,7 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       // Don't reveal whether the email exists
-      return { message: 'If an account with that email exists, a reset code has been sent.' };
+      return { message: 'User with that email does not exist' };
     }
 
     // Generate a 4-digit code
@@ -207,23 +207,50 @@ export class AuthService {
     await this.usersService.update(user.id, { resetToken: resetCode, resetTokenExpires: expires });
 
     try {
-      await this.emailService.sendPasswordResetEmail(user.email, resetCode);
+      const result = await this.emailService.sendPasswordResetEmail(user.email, resetCode);
+      if (result && result.success) {
+        return {
+          message: 'Password reset code has been sent to your email successfully'
+        };
+      } else {
+        throw new InternalServerErrorException('Failed to send password reset email');
+      }
     } catch (error) {
       console.error('Failed to send password reset email:', error);
       throw new InternalServerErrorException('Failed to send password reset email');
     }
-    return {
-      message: 'If an account with that email exists, a reset code has been sent.'
-    };
   }
 
-  async resetPassword(code: string, newPassword: string): Promise<{ message: string }> {
+    async verifyResetToken(token: string, email: string): Promise<{ valid: boolean; message: string }> {
+    if (!token) {
+      throw new BadRequestException('Reset token is required');
+    }
+
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+
+    // Find user by email and reset token
+    const user = await this.usersService.findByEmailAndResetToken(email, token);
+    if (!user) {
+      throw new BadRequestException('Invalid reset token or email');
+    }
+
+    // Check if token has expired
+    if (!user.resetTokenExpires || user.resetTokenExpires < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    return { valid: true, message: 'Reset token is valid' };
+  }
+
+  async resetPassword(email:string , code: string, newPassword: string): Promise<{ message: string }> {
     if (!code) {
       throw new BadRequestException('Reset code is required');
     }
 
     // Find user by reset code
-    const user = await this.usersService.findByResetToken(code);
+    const user = await this.usersService.findByEmailAndResetToken(email, code);
     if (!user) {
       throw new BadRequestException('Invalid or expired code');
     }

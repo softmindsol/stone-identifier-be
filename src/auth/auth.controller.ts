@@ -14,6 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthResponseDto, UserResponseDto } from './dto/auth-response.dto';
+import { VerifyResetTokenDto } from './dto/verify-reset-token.dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 // import { AppleAuthGuard } from './guards/apple-auth.guard'; // Temporarily disabled
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -37,9 +38,14 @@ export class AuthController {
     return this.authService.forgotPassword(forgotPasswordDto.email);
   }
 
+  @Post('verify-reset-token')
+  async verifyResetToken(@Body() verifyResetTokenDto: VerifyResetTokenDto) {
+    return this.authService.verifyResetToken(verifyResetTokenDto.token,verifyResetTokenDto.email);
+  }
+
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+    return this.authService.resetPassword(resetPasswordDto.email, resetPasswordDto.token, resetPasswordDto.newPassword);
   }
 
   @Get('google')
