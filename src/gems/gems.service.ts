@@ -166,20 +166,46 @@ export class GemsService {
   }
 
   // Service method for getting gemstone details by ID
-  async getGemstoneDetailsById(id: string): Promise<GemstoneIdentificationResponseDto | null> {
+  async getGemstoneDetailsById(id: string): Promise<any | null> {
     const gem = await this.findById(id);
     
     if (!gem) {
       return null;
     }
 
-    // Use common function to structure response
-    return this.structureGemstoneResponse(
-      gem,
-      1.0, // Full confidence since it's from our database
-      `Direct database lookup for ${gem.stone_name}`,
-      [], // No alternative matches for direct lookup
-      'database-lookup'
-    );
+    // Return simplified response without metadata, reasoning, alternative_matches, and status
+    return {
+      id: gem._id?.toString(),
+      name: gem.stone_name,
+      confidence: 1.0,
+      variety_of: gem.variety_of,
+      known_as: gem.known_as,
+      albums: gem.albums,
+      tags: gem.tags,
+      rarity: gem.sections.overview.rarity,
+      quick_facts: gem.sections.overview.quick_facts,
+      
+      overview: {
+        current_market_range: gem.sections.overview.current_market_range,
+        description: gem.sections.overview.description,
+        stone_profile: gem.sections.overview.stone_profile,
+        price: gem.sections.overview.price,
+        how_to_select: gem.sections.selection_identification.how_to_select,
+        how_to_identify: gem.sections.selection_identification.how_to_identify,
+        geographical_occurrence: gem.sections.geographical_occurrence,
+        people_often_ask: gem.sections.people_often_ask
+      },
+
+      meanings: gem.sections.meanings,
+
+      properties_and_lore: {
+        ...gem.sections.properties,
+        history: gem.sections.history_lore.history,
+        mythology: gem.sections.history_lore.mythology,
+        lore: gem.sections.history_lore.lore
+      },
+
+      more: gem.sections.more
+    };
   }
 }
