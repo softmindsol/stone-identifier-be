@@ -1,12 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Suggestion, SuggestionDocument, SuggestionType, SuggestionStatus } from './entities/suggestion.entity';
-import { 
-  CreateGemstoneFeedbackDto,
-  CreateAppSuggestionDto,
-  SuggestionResponseDto
-} from './dto/suggestion.dto';
+import { Suggestion, SuggestionDocument, SuggestionStatus, SuggestionType } from './entities/suggestion.entity';
+import { CreateBirdFeedbackDto, CreateAppSuggestionDto } from './dto/create-suggestion.dto';
 
 @Injectable()
 export class SuggestionsService {
@@ -15,91 +11,78 @@ export class SuggestionsService {
     private suggestionModel: Model<SuggestionDocument>,
   ) {}
 
-  async createGemstoneFeedback(userId: string, createFeedbackDto: CreateGemstoneFeedbackDto): Promise<SuggestionResponseDto> {
-    // Validate required fields based on suggestion type
-    if (createFeedbackDto.type === SuggestionType.ERROR_IN_CONTENT && !createFeedbackDto.content) {
-      throw new BadRequestException('Content is required for error reports');
-    }
-    
-    if (createFeedbackDto.type === SuggestionType.SUGGESTIONS && !createFeedbackDto.content) {
-      throw new BadRequestException('Content is required for suggestions');
-    }
-    
-    if (createFeedbackDto.type === SuggestionType.INCORRECT_IDENTIFICATION && !createFeedbackDto.suggestedIdentification) {
-      throw new BadRequestException('Suggested identification is required for incorrect identification reports');
-    }
-
-    const suggestion = new this.suggestionModel({
-      ...createFeedbackDto,
-      userId: new Types.ObjectId(userId),
-      gemstoneRef: new Types.ObjectId(createFeedbackDto.gemstoneRef),
-    });
-
-    const savedSuggestion = await suggestion.save();
-    return this.transformToResponseDto(savedSuggestion);
+  async findAll(): Promise<Suggestion[]> {
+    return this.suggestionModel
+      .find()
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
-  async createAppSuggestion(userId: string, createAppSuggestionDto: CreateAppSuggestionDto): Promise<SuggestionResponseDto> {
+  async findById(id: string): Promise<Suggestion> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid suggestion ID');
+    }
+
+    const suggestion = await this.suggestionModel.findById(id).exec();
+    if (!suggestion) {
+      throw new NotFoundException(`Suggestion with ID ${id} not found`);
+    }
+    return suggestion;
+  }
+
+  async findByUserId(userId: string): Promise<Suggestion[]> {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    return this.suggestionModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async findByStatus(status: SuggestionStatus): Promise<Suggestion[]> {
+    return this.suggestionModel
+      .find({ status })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async createBirdFeedback(
+    userId: string,
+    createDto: CreateBirdFeedbackDto,
+  ): Promise<Suggestion> {
+    // Validate that type is not APP_SUGGESTION
+    if (createDto.type === SuggestionType.APP_SUGGESTION) {
+      throw new BadRequestException(
+        'APP_SUGGESTION type is not allowed for bird feedback. Use app feedback endpoint instead.',
+      );
+    }
+
     const suggestion = new this.suggestionModel({
-      ...createAppSuggestionDto,
+      userId: new Types.ObjectId(userId),
+      birdRef: new Types.ObjectId(createDto.birdRef),
+      type: createDto.type,
+      content: createDto.content,
+      status: SuggestionStatus.PENDING,
+    });
+
+    return suggestion.save();
+  }
+
+  async createAppFeedback(
+    userId: string,
+    createDto: CreateAppSuggestionDto,
+  ): Promise<Suggestion> {
+    const suggestion = new this.suggestionModel({
       userId: new Types.ObjectId(userId),
       type: SuggestionType.APP_SUGGESTION,
+      userEmail: createDto.userEmail,
+      content: createDto.content,
+      photos: createDto.photos || [],
+      status: SuggestionStatus.PENDING,
     });
 
-    const savedSuggestion = await suggestion.save();
-    return this.transformToResponseDto(savedSuggestion);
-  }
-
-  async findAllByUser(
-    userId: string, 
-    page: number = 1, 
-    limit: number = 20
-  ): Promise<{
-    suggestions: SuggestionResponseDto[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }> {
-    const skip = (page - 1) * limit;
-    
-    const [suggestions, total] = await Promise.all([
-      this.suggestionModel
-        .find({ userId: new Types.ObjectId(userId), isActive: true })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('gemstoneRef', 'stone_name')
-        .exec(),
-      this.suggestionModel.countDocuments({ userId: new Types.ObjectId(userId), isActive: true })
-    ]);
-
-    return {
-      suggestions: suggestions.map(suggestion => this.transformToResponseDto(suggestion)),
-      total,
-      page,
-      totalPages: Math.ceil(total / limit)
-    };
-  }
-
-  private transformToResponseDto(suggestion: SuggestionDocument): SuggestionResponseDto {
-    return {
-      id: suggestion._id.toString(),
-      userId: suggestion.userId.toString(),
-      gemstoneRef: suggestion.gemstoneRef?.toString(),
-      type: suggestion.type,
-      status: suggestion.status,
-      content: suggestion.content,
-      title: suggestion.title,
-      userEmail: suggestion.userEmail,
-      errorField: suggestion.errorField,
-      suggestedIdentification: suggestion.suggestedIdentification,
-      photos: suggestion.photos,
-      tags: suggestion.tags,
-      adminResponse: suggestion.adminResponse,
-      reviewedBy: suggestion.reviewedBy?.toString(),
-      reviewedAt: suggestion.reviewedAt,
-      createdAt: suggestion.createdAt!,
-      updatedAt: suggestion.updatedAt!,
-    };
+    return suggestion.save();
   }
 }

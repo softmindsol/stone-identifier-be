@@ -78,6 +78,28 @@ export class UsersService {
     return user.save();
   }
 
+    async getUserProfile(userId: string): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    provider: string;
+    verified: boolean;
+    profileImageUrl?: string;
+    createdAt: Date;
+  }> {
+    const user = await this.findById(userId);
+    
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      provider: user.provider,
+      verified: user.verified,
+      profileImageUrl: user.profileImageUrl,
+      createdAt: user.createdAt
+    };
+  }
+
   async remove(id: string): Promise<void> {
     const result = await this.userModel.findByIdAndDelete(id).exec();
     if (!result) {

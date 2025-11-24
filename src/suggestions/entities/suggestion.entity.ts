@@ -51,20 +51,10 @@ export class Suggestion {
   @Prop({ maxlength: 1000 })
   content?: string;
 
-  @Prop({ maxlength: 255 })
-  title?: string;
 
   // User's email for contact (especially for app suggestions)
   @Prop({ maxlength: 255 })
   userEmail?: string;
-
-  // For error reports - specific field or section
-  @Prop({ maxlength: 100 })
-  errorField?: string;
-
-  // For incorrect identification - user's suggested correct identification
-  @Prop({ maxlength: 255 })
-  suggestedIdentification?: string;
 
   // Photos/attachments (URLs to uploaded images)
   @Prop({ type: [String], default: [] })
@@ -90,8 +80,3 @@ export class Suggestion {
 }
 
 export const SuggestionSchema = SchemaFactory.createForClass(Suggestion);
-
-// Create indexes for better performance
-SuggestionSchema.index({ userId: 1 });
-SuggestionSchema.index({ gemstoneRef: 1 });
-SuggestionSchema.index({ type: 1 });

@@ -18,11 +18,14 @@ import { VerifyResetTokenDto } from './dto/verify-reset-token.dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 // import { AppleAuthGuard } from './guards/apple-auth.guard'; // Temporarily disabled
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { UsersService } from '../users/users.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
-
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UsersService,
+  ) {}
   @Post('register')
   async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
     return this.authService.register(registerDto);
@@ -88,6 +91,8 @@ export class AuthController {
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: Request): Promise<UserResponseDto> {
-    return req.user as UserResponseDto;
+    const user = req.user as any;
+    const userId = user._id || user.id;
+    return this.userService.getUserProfile(userId);
   }
 }
